@@ -1,4 +1,4 @@
-package com.mustang4w.wang.photopickproject;
+package com.mustang4w.wang.photopickproject.adapter;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -10,6 +10,9 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.luck.picture.lib.entity.LocalMedia;
+import com.mustang4w.wang.photopickproject.R;
 
 import java.util.List;
 
@@ -21,11 +24,14 @@ import java.util.List;
 public class PhotoGridAdapter extends RecyclerView.Adapter<PhotoGridAdapter.InnerViewHolder> {
 
     private Context mContext;
-    private List<PhotoItemBean> mList;
+    private List<LocalMedia> mList;
     private OnItemClickListener mOnItemClickListener;
     private OnDeleteClickListener mOnDeleteClickListener;
 
-    public PhotoGridAdapter(Context context, List<PhotoItemBean> list) {
+    private static final int TYPE_ADD_PHOTO = 1;
+    private static final int TYPE_PHOTO = 2;
+
+    public PhotoGridAdapter(Context context, List<LocalMedia> list) {
         mContext = context;
         mList = list;
     }
@@ -39,20 +45,23 @@ public class PhotoGridAdapter extends RecyclerView.Adapter<PhotoGridAdapter.Inne
 
     @Override
     public void onBindViewHolder(@NonNull InnerViewHolder holder, int position) {
-        if (mList.get(position).isPhoto()) {
+        if (holder.getItemViewType() == TYPE_PHOTO) {
             holder.imgDelete.setVisibility(View.VISIBLE);
-            Glide.with(mContext)
-                    .load(mList.get(position).getBitmapResource())
+            Glide.with(holder.itemView.getContext())
+                    .load(mList.get(position).getPath())
                     .centerCrop()
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .into(holder.imgPhoto);
         } else {
             holder.imgDelete.setVisibility(View.GONE);
-            holder.imgPhoto.setImageResource(R.drawable.icon_photo_list_picker);
+            Glide.with(mContext)
+                    .load(R.drawable.icon_photo_list_picker)
+                    .into(holder.imgPhoto);
         }
         holder.itemView.setOnClickListener(v -> {
             if (mOnItemClickListener != null) {
-                if (mList.get(position).isPhoto()) {
-                    mOnItemClickListener.onShowBigPhotoListener(mList.get(position));
+                if (holder.getItemViewType() == TYPE_PHOTO) {
+                    mOnItemClickListener.onShowBigPhotoListener(position);
                 } else {
                     mOnItemClickListener.onAddPhotoListener();
                 }
@@ -75,7 +84,12 @@ public class PhotoGridAdapter extends RecyclerView.Adapter<PhotoGridAdapter.Inne
 
     @Override
     public int getItemCount() {
-        return mList.size();
+        return mList.size() + 1;
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        return position == mList.size() ? TYPE_ADD_PHOTO : TYPE_PHOTO;
     }
 
     class InnerViewHolder extends RecyclerView.ViewHolder {
@@ -98,17 +112,17 @@ public class PhotoGridAdapter extends RecyclerView.Adapter<PhotoGridAdapter.Inne
         /**
          * 展示图片大图
          *
-         * @param bean 图片实体{@link PhotoItemBean}
+         * @param position 位置
          */
-        void onShowBigPhotoListener(PhotoItemBean bean);
+        void onShowBigPhotoListener(int position);
     }
 
     public interface OnDeleteClickListener {
         /**
          * 删除图片
          *
-         * @param bean 图片实体{@link PhotoItemBean}
+         * @param bean 图片实体{@link LocalMedia}
          */
-        void onPhotoDeleteClickListener(PhotoItemBean bean);
+        void onPhotoDeleteClickListener(LocalMedia bean);
     }
 }

@@ -5,9 +5,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.content.DialogInterface;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -15,8 +12,8 @@ import com.luck.picture.lib.PictureSelector;
 import com.luck.picture.lib.config.PictureMimeType;
 import com.luck.picture.lib.entity.LocalMedia;
 import com.luck.picture.lib.listener.OnResultCallbackListener;
+import com.mustang4w.wang.photopickproject.adapter.PhotoGridAdapter;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,7 +22,7 @@ import java.util.List;
  */
 public class MainActivity extends AppCompatActivity {
 
-    private List<PhotoItemBean> photoItemBeanList = new ArrayList<>();
+    private List<LocalMedia> localMediaList = new ArrayList<>();
     private PhotoGridAdapter photoGridAdapter;
 
     @Override
@@ -37,8 +34,11 @@ public class MainActivity extends AppCompatActivity {
         initData();
     }
 
+    /**
+     * 初始化RecyclerView
+     */
     private void initRecyclerView() {
-        photoGridAdapter = new PhotoGridAdapter(this, photoItemBeanList);
+        photoGridAdapter = new PhotoGridAdapter(this, localMediaList);
         photoGridAdapter.setOnItemClickListener(onPhotoGridClickListener);
         photoGridAdapter.setOnDeleteClickListener(onPhotoDeleteClickListener);
         RecyclerView recyclerPhoto = findViewById(R.id.recycler_photo);
@@ -50,8 +50,6 @@ public class MainActivity extends AppCompatActivity {
      * 初始化数据，为列表的图片选择器增加数据
      */
     private void initData() {
-        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.icon_photo_list_picker);
-        photoItemBeanList.add(new PhotoItemBean("", "", bitmap, false));
     }
 
     /**
@@ -65,17 +63,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onShowBigPhotoListener(PhotoItemBean bean) {
+        public void onShowBigPhotoListener(int position) {
             Log.d("wymmmmmmmmmmm", "onShowBigPhotoListener(PhotoItemBean bean)");
+            showBigPhoto(position);
         }
     };
 
-    PhotoGridAdapter.OnDeleteClickListener onPhotoDeleteClickListener = new PhotoGridAdapter.OnDeleteClickListener() {
-        @Override
-        public void onPhotoDeleteClickListener(PhotoItemBean bean) {
-            deletePhotoDialog(bean);
-        }
-    };
+    PhotoGridAdapter.OnDeleteClickListener onPhotoDeleteClickListener = this::deletePhotoDialog;
 
     /**
      * PictureSelector 照片选择器组件
@@ -85,18 +79,26 @@ public class MainActivity extends AppCompatActivity {
         PictureSelector.create(this)
                 //所有类型
                 .openGallery(PictureMimeType.ofAll())
-                .loadImageEngine(GlideEngine.createGlideEngine())
+                .imageEngine(GlideEngine.createGlideEngine())
+                //是否压缩
+//                .isCompress(true)
+                //最小压缩尺寸
+//                .minimumCompressSize(0)
+                //压缩质量 0 - 100
+//                .compressQuality(50)
+                //压缩是否保持透明通道
+//                .compressFocusAlpha(true)
+                //压缩文件保存地址
+//                .compressSavePath(getCacheDir().getPath())
+                //开启原图选项
+//                .isOriginalImageControl(true)
                 .forResult(new OnResultCallbackListener<LocalMedia>() {
                     @Override
                     public void onResult(List<LocalMedia> result) {
                         Log.d("wymmmmmmmmm", "result");
-                        for (LocalMedia media : result) {
-                            File photoFile = new File(media.getPath());
-                            int preSize = photoItemBeanList.size() - 1;
-                            photoItemBeanList.add(preSize, new PhotoItemBean(photoFile.getName(), photoFile.getPath(),
-                                    BitmapFactory.decodeFile(photoFile.getPath()), true));
-                            photoGridAdapter.notifyItemRangeChanged(preSize, result.size());
-                        }
+                        int preSize = localMediaList.size() - 1;
+                        localMediaList.addAll(result);
+                        photoGridAdapter.notifyItemRangeChanged(preSize, result.size());
                     }
 
                     @Override
@@ -107,20 +109,32 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
+     * 展示大图
+     *
+     * @param position 选中位置
+     */
+    private void showBigPhoto(int position) {
+        PictureSelector.create(this)
+                .themeStyle(R.style.picture_default_style)
+                .isNotPreviewDownload(true)
+                .imageEngine(GlideEngine.createGlideEngine())
+                .openExternalPreview(position, localMediaList);
+    }
+
+    /**
      * 确认删除当前图片弹窗
      *
-     * @param bean {@link PhotoItemBean}
+     * @param bean {@link LocalMedia}
      */
-    private void deletePhotoDialog(PhotoItemBean bean) {
+    private void deletePhotoDialog(LocalMedia bean) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("提示");
         builder.setMessage("是否确认删除当前图片");
-        builder.setPositiveButton("确认", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                photoGridAdapter.notifyItemRemoved(photoItemBeanList.indexOf(bean));
-                photoItemBeanList.remove(bean);
-            }
+        builder.setPositiveButton("确认", (dialog, which) -> {
+            int currentPosition = localMediaList.indexOf(bean);
+            localMediaList.remove(bean);
+            photoGridAdapter.notifyItemRemoved(currentPosition);
+            photoGridAdapter.notifyItemRangeChanged(currentPosition, localMediaList.size() - currentPosition);
         });
         builder.setNegativeButton("取消", null);
         builder.create().show();

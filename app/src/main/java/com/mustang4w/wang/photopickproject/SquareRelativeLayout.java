@@ -1,11 +1,8 @@
 package com.mustang4w.wang.photopickproject;
 
 import android.content.Context;
-import android.os.Build;
 import android.util.AttributeSet;
 import android.widget.RelativeLayout;
-
-import androidx.annotation.RequiresApi;
 
 /**
  * 等宽高的RelativeLayout
@@ -28,10 +25,6 @@ public class SquareRelativeLayout extends RelativeLayout {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        setMeasuredDimension(getDefaultSize(0, widthMeasureSpec), getDefaultSize(0, heightMeasureSpec));
-        int childWidthSize = getMeasuredWidth();
-        int childHeightSize = getMeasuredHeight();
-        heightMeasureSpec = widthMeasureSpec = MeasureSpec.makeMeasureSpec(childWidthSize, MeasureSpec.EXACTLY);
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        super.onMeasure(widthMeasureSpec, widthMeasureSpec);
     }
 }
